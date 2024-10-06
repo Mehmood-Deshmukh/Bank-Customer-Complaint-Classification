@@ -1,65 +1,67 @@
-from flask import Flask, request, render_template, redirect, url_for
+import streamlit as st
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer  # or TfidfVectorizer
 import pickle
 
-app = Flask(__name__)
-
+# Load pre-trained Logistic Regression model
 with open('logistic_regression_model.pkl', 'rb') as model_file:
     lr_model = pickle.load(model_file)
 
-
+# Load the vectorizer used during training
 with open('vectorizer.pkl', 'rb') as vectorizer_file:
     vectorizer = pickle.load(vectorizer_file)
 
+# Initialize session state for complaints
+if 'complaints' not in st.session_state:
+    st.session_state.complaints = []
 
-complaints = []
-
+# Define departments (queues)
 departments = ['credit_card', 'credit_reporting', 'debt_collection', 'mortgages_and_loans', 'retail_banking']
 
+# Title of the application
+st.title("Customer Complaint Classification")
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+# Customer input section
+st.header("Submit a Complaint")
+complaint = st.text_area("Enter your complaint here:")
 
-@app.route('/customer', methods=['GET', 'POST'])
-def customer():
-    if request.method == 'POST':
-        complaint = request.form['complaint']
+if st.button("Submit"):
+    if complaint:
+        # Vectorize the complaint for prediction
         inputs = vectorizer.transform([complaint]) 
 
+        # Classify the complaint
         prediction = lr_model.predict(inputs)[0]
         
-        print(f"Prediction: {prediction}") 
-
         if isinstance(prediction, str):
-
             try:
                 prediction = departments.index(prediction) 
             except ValueError:
-                return "Prediction string not found in departments."
-
-
+                st.error("Prediction string not found in departments.")
+        
         department = departments[prediction] 
 
-        complaints.append({'complaint': complaint, 'department': department})
+        # Save the complaint with the classified department in session state
+        st.session_state.complaints.append({'complaint': complaint, 'department': department})
+        
+        st.success(f"Your complaint has been submitted and classified under: **{department.replace('_', ' ').title()}**")
 
-        return redirect(url_for('thank_you'))
-    return render_template('customer.html')
+    else:
+        st.error("Please enter a complaint before submitting.")
 
-
-@app.route('/thank_you')
-def thank_you():
-    return render_template('thank_you.html')
-
-@app.route('/admin')
-def admin():
-
-    dept_complaints = {dept: [] for dept in departments}
-    for complaint in complaints:
-        dept_complaints[complaint['department']].append(complaint['complaint'])
-
-    return render_template('admin.html', complaints=dept_complaints)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+# Admin section to view complaints
+st.header("Admin View")
+if st.button("Show Complaints"):
+    if st.session_state.complaints:
+        # Organize complaints by department
+        dept_complaints = {dept: [] for dept in departments}
+        for complaint in st.session_state.complaints:
+            dept_complaints[complaint['department']].append(complaint['complaint'])
+        
+        for dept, comps in dept_complaints.items():
+            # Add some styling for the department title
+            st.markdown(f"<h5 style='color: #4CAF50;'>{dept.replace('_', ' ').title()}</h5>", unsafe_allow_html=True)
+            # Display each complaint in a styled box
+            for comp in comps:
+                st.markdown(f"<div style='background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px; padding: 10px; margin: 5px 0;'>{comp}</div>", unsafe_allow_html=True)
+    else:
+        st.write("No complaints submitted yet.")
