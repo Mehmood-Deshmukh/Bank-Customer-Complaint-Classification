@@ -13,6 +13,7 @@ filelock==3.16.1
 Flask==3.0.3
 fonttools==4.54.1
 fsspec==2024.9.0
+gunicorn==23.0.0
 huggingface-hub==0.25.1
 idna==3.10
 imbalanced-learn==0.12.4
