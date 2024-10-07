@@ -141,19 +141,39 @@ def admin_page():
     st.header("Complaint Overview")
     dept_counts = c.execute("SELECT department, COUNT(*) FROM complaints GROUP BY department").fetchall()
     dept_data = {dept: count for dept, count in dept_counts}
+    
+    dept_data = {dept.replace('_', ' ').title(): count for dept, count in dept_data.items()}
     st.bar_chart(dept_data)
+    
 
     st.header("Recent Complaints")
-    complaints = c.execute("SELECT * FROM complaints ORDER BY timestamp DESC LIMIT 10").fetchall()
+    complaints = c.execute("SELECT * FROM complaints ORDER BY timestamp DESC LIMIT 3").fetchall()
     if complaints:
         for complaint in complaints:
-            with st.expander(f"Complaint ID: {complaint[0]} - {complaint[3]}"):
+            with st.expander(f"Complaint ID: {complaint[0]} - {complaint[3].replace('_', ' ').title()}"):
                 st.write(f"**User ID:** {complaint[1]}")
                 st.write(f"**Complaint:** {complaint[2]}")
                 st.write(f"**Department:** {complaint[3]}")
                 st.write(f"**Timestamp:** {complaint[4]}")
     else:
         st.info("No complaints submitted yet.")
+
+    st.header("Department-wise Complaints Queue")
+    for dept in departments:
+        with st.expander(f"{dept.replace('_', ' ').title()} Queue"):
+            dept_complaints = c.execute("SELECT * FROM complaints WHERE department=? ORDER BY timestamp DESC LIMIT 5", (dept,)).fetchall()
+            if dept_complaints:
+                for complaint in dept_complaints:
+                    st.write(f"**Complaint ID:** {complaint[0]}")
+                    st.write(f"**User ID:** {complaint[1]}")
+                    st.write(f"**Complaint:** {complaint[2]}")
+                    st.write(f"**Timestamp:** {complaint[4]}")
+                    # add seperator or divider of some sort
+
+                    st.write('---')
+            
+            else:
+                st.info(f"No complaints in the {dept.replace('_', ' ').title()} queue.")
 
     if st.button("Logout"):
         st.session_state.page = 'login'
