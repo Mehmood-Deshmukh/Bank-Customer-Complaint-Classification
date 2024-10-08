@@ -56,9 +56,11 @@ def register_user(username, password):
         return False
 
 def save_complaint(user_id, complaint, department):
+    timestamp = datetime.now().isoformat()  
     c.execute("INSERT INTO complaints (user_id, complaint, department, timestamp) VALUES (?, ?, ?, ?)",
-              (user_id, complaint, department, datetime.now()))
+              (user_id, complaint, department, timestamp))
     conn.commit()
+
 
 def login_page():
     st.title("Login")
