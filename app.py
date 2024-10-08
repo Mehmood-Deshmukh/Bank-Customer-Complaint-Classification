@@ -3,30 +3,41 @@ import pickle
 import sqlite3
 from datetime import datetime
 
+# Load the model and vectorizer
 with open('model.pkl', 'rb') as model_file:
     model = pickle.load(model_file)
 with open('vectorizer.pkl', 'rb') as vectorizer_file:
     vectorizer = pickle.load(vectorizer_file)
 
+# Create a connection to the SQLite database
 conn = sqlite3.connect('complaints.db')
 c = conn.cursor()
+
+# Create the tables if they don't exist
+
+# complaints table: id, user_id, complaint, department, timestamp
 c.execute('''CREATE TABLE IF NOT EXISTS complaints
              (id INTEGER PRIMARY KEY AUTOINCREMENT,
               user_id TEXT,
               complaint TEXT,
               department TEXT,
               timestamp DATETIME)''')
+
+# users table: id, username, password
 c.execute('''CREATE TABLE IF NOT EXISTS users
              (id INTEGER PRIMARY KEY AUTOINCREMENT,
               username TEXT UNIQUE,
               password TEXT)''')
 conn.commit()
 
+# List of departments
 departments = ['credit_card', 'credit_reporting', 'debt_collection', 'mortgages_and_loans', 'retail_banking']
 
+# Admin credentials
 ADMIN_USERNAME = "admin"
 ADMIN_PASSWORD = "admin@123"
 
+# Initialize session state
 if 'page' not in st.session_state:
     st.session_state.page = 'login'
 if 'user_id' not in st.session_state:
@@ -34,13 +45,11 @@ if 'user_id' not in st.session_state:
 if 'is_admin' not in st.session_state:
     st.session_state.is_admin = False
 
-def hash_password(password):
-    return password
 
 def verify_login(username, password):
     if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         return True, True
-    c.execute("SELECT id FROM users WHERE username=? AND password=?", (username, hash_password(password)))
+    c.execute("SELECT id FROM users WHERE username=? AND password=?", (username, password))
     result = c.fetchone()
     if result:
         return result[0], False
@@ -49,11 +58,12 @@ def verify_login(username, password):
 def register_user(username, password):
     try:
         c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-                  (username, hash_password(password)))
+                  (username, password))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
         return False
+
 
 def save_complaint(user_id, complaint, department):
     timestamp = datetime.now().isoformat()  
@@ -155,7 +165,7 @@ def admin_page():
             with st.expander(f"Complaint ID: {complaint[0]} - {complaint[3].replace('_', ' ').title()}"):
                 st.write(f"**User ID:** {complaint[1]}")
                 st.write(f"**Complaint:** {complaint[2]}")
-                st.write(f"**Department:** {complaint[3]}")
+                st.write(f"**Department:** {complaint[3].replace('_', ' ').title()}")
                 st.write(f"**Timestamp:** {complaint[4]}")
     else:
         st.info("No complaints submitted yet.")
@@ -170,7 +180,6 @@ def admin_page():
                     st.write(f"**User ID:** {complaint[1]}")
                     st.write(f"**Complaint:** {complaint[2]}")
                     st.write(f"**Timestamp:** {complaint[4]}")
-                    # add seperator or divider of some sort
 
                     st.write('---')
             
