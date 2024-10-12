@@ -14,8 +14,6 @@ conn = sqlite3.connect('complaints.db')
 c = conn.cursor()
 
 # Create the tables if they don't exist
-
-# complaints table: id, user_id, complaint, department, timestamp
 c.execute('''CREATE TABLE IF NOT EXISTS complaints
              (id INTEGER PRIMARY KEY AUTOINCREMENT,
               user_id TEXT,
@@ -23,7 +21,6 @@ c.execute('''CREATE TABLE IF NOT EXISTS complaints
               department TEXT,
               timestamp DATETIME)''')
 
-# users table: id, username, password
 c.execute('''CREATE TABLE IF NOT EXISTS users
              (id INTEGER PRIMARY KEY AUTOINCREMENT,
               username TEXT UNIQUE,
@@ -45,7 +42,6 @@ if 'user_id' not in st.session_state:
 if 'is_admin' not in st.session_state:
     st.session_state.is_admin = False
 
-
 def verify_login(username, password):
     if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
         return True, True
@@ -64,13 +60,11 @@ def register_user(username, password):
     except sqlite3.IntegrityError:
         return False
 
-
 def save_complaint(user_id, complaint, department):
     timestamp = datetime.now().isoformat()  
     c.execute("INSERT INTO complaints (user_id, complaint, department, timestamp) VALUES (?, ?, ?, ?)",
               (user_id, complaint, department, timestamp))
     conn.commit()
-
 
 def login_page():
     st.title("Login")
@@ -135,7 +129,8 @@ def customer_page():
     past_complaints = c.execute("SELECT * FROM complaints WHERE user_id=? ORDER BY timestamp DESC", (st.session_state.user_id,)).fetchall()
     if past_complaints:
         for complaint in past_complaints:
-            with st.expander(f"Complaint on {complaint[4]}"):
+            formatted_date = datetime.fromisoformat(complaint[4]).strftime("%Y-%m-%d %H:%M:%S")
+            with st.expander(f"Complaint on {formatted_date}"):
                 st.write(f"**Department:** {complaint[3].replace('_', ' ').title()}")
                 st.write(f"**Complaint:** {complaint[2]}")
     else:
@@ -172,11 +167,12 @@ def admin_page():
     complaints = c.execute("SELECT * FROM complaints ORDER BY timestamp DESC LIMIT 3").fetchall()
     if complaints:
         for complaint in complaints:
+            formatted_date = datetime.fromisoformat(complaint[4]).strftime("%Y-%m-%d %H:%M:%S")
             with st.expander(f"Complaint ID: {complaint[0]} - {complaint[3].replace('_', ' ').title()}"):
                 st.write(f"**User ID:** {complaint[1]}")
                 st.write(f"**Complaint:** {complaint[2]}")
                 st.write(f"**Department:** {complaint[3].replace('_', ' ').title()}")
-                st.write(f"**Timestamp:** {complaint[4]}")
+                st.write(f"**Timestamp:** {formatted_date}")
     else:
         st.info("No complaints submitted yet.")
 
@@ -186,13 +182,12 @@ def admin_page():
             dept_complaints = c.execute("SELECT * FROM complaints WHERE department=? ORDER BY timestamp DESC LIMIT 5", (dept,)).fetchall()
             if dept_complaints:
                 for complaint in dept_complaints:
+                    formatted_date = datetime.fromisoformat(complaint[4]).strftime("%Y-%m-%d %H:%M:%S")
                     st.write(f"**Complaint ID:** {complaint[0]}")
                     st.write(f"**User ID:** {complaint[1]}")
                     st.write(f"**Complaint:** {complaint[2]}")
-                    st.write(f"**Timestamp:** {complaint[4]}")
-
+                    st.write(f"**Timestamp:** {formatted_date}")
                     st.write('---')
-            
             else:
                 st.info(f"No complaints in the {dept.replace('_', ' ').title()} queue.")
 
