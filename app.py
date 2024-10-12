@@ -130,6 +130,16 @@ def customer_page():
         st.session_state.user_id = None
         st.session_state.is_admin = False
         st.rerun()
+    
+    st.header("Your Past Complaints")
+    past_complaints = c.execute("SELECT * FROM complaints WHERE user_id=? ORDER BY timestamp DESC", (st.session_state.user_id,)).fetchall()
+    if past_complaints:
+        for complaint in past_complaints:
+            with st.expander(f"Complaint on {complaint[4]}"):
+                st.write(f"**Department:** {complaint[3].replace('_', ' ').title()}")
+                st.write(f"**Complaint:** {complaint[2]}")
+    else:
+        st.info("You haven't submitted any complaints yet.")
 
 def admin_page():
     if not st.session_state.is_admin:
